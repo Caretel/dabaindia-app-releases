@@ -1,0 +1,98 @@
+<?php
+/**
+ * App Update Check API
+ * Endpoint: auth?action=check_update
+ * 
+ * This file handles in-app update checks for the Dabaindia Attendance App.
+ * Hosted at: https://caretel.in/dabaindia_attendance/api/
+ * 
+ * GitHub Releases: https://github.com/Caretel/dabaindia-app-releases/releases
+ */
+
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+
+// ============================================================
+// RELEASE REGISTRY — Update this block for every new release
+// ============================================================
+$releases = [
+    [
+        'version_name' => '1.0.1',
+        'version_code' => 2,
+        'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.1/app-release.apk',
+        'notes'        => "- Auto-update system added\n- Security improvements\n- Bug fixes",
+        'mandatory'    => false,
+    ],
+    // --- ADD NEW RELEASES ABOVE THIS LINE ---
+    // Example for next release:
+    // [
+    //     'version_name' => '1.0.2',
+    //     'version_code' => 3,
+    //     'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.2/app-release.apk',
+    //     'notes'        => "- New feature X\n- Fixed Y",
+    //     'mandatory'    => false,
+    // ],
+];
+
+// ============================================================
+// DO NOT EDIT BELOW THIS LINE
+// ============================================================
+
+// Get the latest release (last in array)
+$latest = end($releases);
+
+// Get current version from query parameter sent by the app
+$current_version = isset($_GET['version']) ? trim($_GET['version']) : '0.0.0';
+
+// Parse version codes by matching version_name to the releases array
+$current_code = 0;
+foreach ($releases as $release) {
+    if ($release['version_name'] === $current_version) {
+        $current_code = $release['version_code'];
+        break;
+    }
+}
+
+// Fallback: if version not found, try to extract build number from version string
+// e.g. the app sends versionName from pubspec (e.g. "1.0.1")
+if ($current_code === 0) {
+    // Try numeric comparison on version string parts
+    $current_parts = explode('.', $current_version);
+    $latest_parts  = explode('.', $latest['version_name']);
+    
+    $is_older = false;
+    for ($i = 0; $i < max(count($current_parts), count($latest_parts)); $i++) {
+        $c = isset($current_parts[$i]) ? (int)$current_parts[$i] : 0;
+        $l = isset($latest_parts[$i])  ? (int)$latest_parts[$i]  : 0;
+        if ($c < $l) { $is_older = true; break; }
+        if ($c > $l) { break; }
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'data'    => [
+            'has_update'  => $is_older,
+            'version'     => $latest['version_name'],
+            'version_code'=> $latest['version_code'],
+            'update_url'  => $latest['update_url'],
+            'notes'       => $latest['notes'],
+            'mandatory'   => $latest['mandatory'],
+        ]
+    ]);
+    exit;
+}
+
+// Compare version codes
+$has_update = $latest['version_code'] > $current_code;
+
+echo json_encode([
+    'success' => true,
+    'data'    => [
+        'has_update'   => $has_update,
+        'version'      => $latest['version_name'],
+        'version_code' => $latest['version_code'],
+        'update_url'   => $latest['update_url'],
+        'notes'        => $latest['notes'],
+        'mandatory'    => $latest['mandatory'],
+    ]
+]);

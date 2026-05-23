@@ -1,0 +1,90 @@
+name: Build & Release APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Allow manual trigger from GitHub UI
+
+permissions:
+  contents: write  # Needed to create GitHub Releases
+
+jobs:
+  build-and-release:
+    name: Build APK & Publish Release
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout code ─────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Java (required by Android build tools) ─────────────────
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # ── 3. Set up Flutter ─────────────────────────────────────────────────
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.29.3"
+          channel: stable
+          cache: true
+
+      # ── 4. Install dependencies ───────────────────────────────────────────
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      # ── 5. Extract version from pubspec.yaml ──────────────────────────────
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //' | tr -d '[:space:]')
+          APP_VERSION=$(echo $VERSION | cut -d'+' -f1)
+          BUILD_NUMBER=$(echo $VERSION | cut -d'+' -f2)
+          echo "version=$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "tag=v$APP_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ Version: $APP_VERSION  Build: $BUILD_NUMBER"
+
+      # ── 6. Build release APK ──────────────────────────────────────────────
+      - name: Build release APK
+        run: flutter build apk --release --build-name=${{ steps.version.outputs.version }} --build-number=${{ steps.version.outputs.build_number }}
+
+      # ── 7. Rename APK with version ────────────────────────────────────────
+      - name: Rename APK
+        run: |
+          mkdir -p artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             artifacts/dabaindia-attendance-v${{ steps.version.outputs.version }}.apk
+          echo "📦 APK ready: dabaindia-attendance-v${{ steps.version.outputs.version }}.apk"
+
+      # ── 8. Delete existing release/tag if same version was re-pushed ──────
+      - name: Delete existing release (if any)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete ${{ steps.version.outputs.tag }} --yes 2>/dev/null || true
+          git push origin --delete ${{ steps.version.outputs.tag }} 2>/dev/null || true
+
+      # ── 9. Create GitHub Release & upload APK ─────────────────────────────
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create ${{ steps.version.outputs.tag }} \
+            artifacts/dabaindia-attendance-v${{ steps.version.outputs.version }}.apk \
+            --title "DabaIndia Attendance v${{ steps.version.outputs.version }}" \
+            --notes "## 🚀 DabaIndia Attendance App v${{ steps.version.outputs.version }}
+
+          **Build:** #${{ steps.version.outputs.build_number }}
+          **Built:** $(date -u +'%Y-%m-%d %H:%M UTC')
+
+          ### Install
+          Download the APK below and install directly on your device.
+
+          > ⚠️ You may need to enable *Install from unknown sources* in device settings." \
+            --latest
