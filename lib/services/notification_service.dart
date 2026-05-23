@@ -1,40 +1,29 @@
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
 
+/// Local-only notification service (no Firebase).
+/// Shows in-app alerts using flutter_local_notifications.
 class NotificationService {
-  static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _localNotif = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _localNotif =
+      FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
-    // 1. Request Permission
-    await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // 2. Initialize Local Notifications (for foreground alerts)
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
     await _localNotif.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (details) {
-        // Handle notification tap
+        // Handle notification tap if needed
       },
     );
-
-    // 3. Listen for foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      _showLocalNotification(message);
-    });
   }
 
-  static Future<String?> getToken() async {
-    return await _fcm.getToken();
-  }
-
-  static void _showLocalNotification(RemoteMessage message) {
+  /// Show a local notification manually (e.g. from a background task).
+  static Future<void> show({
+    required String title,
+    required String body,
+    int id = 0,
+  }) async {
     const androidDetails = AndroidNotificationDetails(
       'default_channel',
       'Alerts',
@@ -42,12 +31,9 @@ class NotificationService {
       priority: Priority.high,
     );
     const notifDetails = NotificationDetails(android: androidDetails);
-    
-    _localNotif.show(
-      id: message.hashCode,
-      title: message.notification?.title ?? 'DabIndia Alert',
-      body: message.notification?.body ?? '',
-      notificationDetails: notifDetails,
-    );
+    await _localNotif.show(id: id, title: title, body: body, notificationDetails: notifDetails);
   }
+
+  /// Returns null — no FCM token without Firebase.
+  static Future<String?> getToken() async => null;
 }

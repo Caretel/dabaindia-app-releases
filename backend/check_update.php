@@ -19,7 +19,7 @@ $releases = [
     [
         'version_name' => '1.0.1',
         'version_code' => 2,
-        'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.1/app-release.apk',
+        'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.1/dabaindia-attendance-v1.0.1.apk',
         'notes'        => "- Auto-update system added\n- Security improvements\n- Bug fixes",
         'mandatory'    => false,
     ],
