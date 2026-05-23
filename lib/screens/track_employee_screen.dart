@@ -659,24 +659,28 @@ class _TrackEmployeeScreenState extends State<TrackEmployeeScreen>
 
   Widget _buildLoadingState() {
     return Column(
-      children: List.generate(5, (i) => Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        height: 64,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: const Center(
-          child: SizedBox(
-            width: 20, height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2),
+      children: <Widget>[
+        ...List.generate(1, (i) => Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          height: 64,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Center(
+            child: SizedBox(
+              width: 20, height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        )),
+        const Center(
+          child: Padding(
+            padding: EdgeInsets.all(32),
+            child: CircularProgressIndicator(),
           ),
         ),
-      )).take(1).toList()
-        ..add(const Center(child: Padding(
-          padding: EdgeInsets.all(32),
-          child: CircularProgressIndicator(),
-        ))),
+      ],
     );
   }
 
