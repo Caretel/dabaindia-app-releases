@@ -30,15 +30,18 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.29.3"
           channel: stable
           cache: true
 
-      # ── 4. Install dependencies ───────────────────────────────────────────
+      # ── 4. Restore google-services.json from GitHub Secret ────────────────
+      - name: Restore google-services.json
+        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > android/app/google-services.json
+
+      # ── 5. Install dependencies ───────────────────────────────────────────
       - name: Install Flutter dependencies
         run: flutter pub get
 
-      # ── 5. Extract version from pubspec.yaml ──────────────────────────────
+      # ── 6. Extract version from pubspec.yaml ──────────────────────────────
       - name: Extract version
         id: version
         run: |
@@ -50,11 +53,11 @@ jobs:
           echo "tag=v$APP_VERSION" >> $GITHUB_OUTPUT
           echo "✅ Version: $APP_VERSION  Build: $BUILD_NUMBER"
 
-      # ── 6. Build release APK ──────────────────────────────────────────────
+      # ── 7. Build release APK ──────────────────────────────────────────────
       - name: Build release APK
         run: flutter build apk --release --build-name=${{ steps.version.outputs.version }} --build-number=${{ steps.version.outputs.build_number }}
 
-      # ── 7. Rename APK with version ────────────────────────────────────────
+      # ── 8. Rename APK with version ────────────────────────────────────────
       - name: Rename APK
         run: |
           mkdir -p artifacts
@@ -62,7 +65,7 @@ jobs:
              artifacts/dabaindia-attendance-v${{ steps.version.outputs.version }}.apk
           echo "📦 APK ready: dabaindia-attendance-v${{ steps.version.outputs.version }}.apk"
 
-      # ── 8. Delete existing release/tag if same version was re-pushed ──────
+      # ── 9. Delete existing release/tag if same version was re-pushed ──────
       - name: Delete existing release (if any)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -70,7 +73,7 @@ jobs:
           gh release delete ${{ steps.version.outputs.tag }} --yes 2>/dev/null || true
           git push origin --delete ${{ steps.version.outputs.tag }} 2>/dev/null || true
 
-      # ── 9. Create GitHub Release & upload APK ─────────────────────────────
+      # ── 10. Create GitHub Release & upload APK ────────────────────────────
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
