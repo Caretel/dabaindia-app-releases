@@ -300,6 +300,20 @@ switch ($act) {
                 'notes'        => "- Auto-update system added\n- Security improvements\n- Bug fixes",
                 'mandatory'    => false,
             ],
+            [
+                'version_name' => '1.0.2',
+                'version_code' => 3,
+                'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.2/dabaindia-attendance-v1.0.2.apk',
+                'notes'        => "- General improvements and bug fixes",
+                'mandatory'    => false,
+            ],
+            [
+                'version_name' => '1.0.3',
+                'version_code' => 4,
+                'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.3/dabaindia-attendance-v1.0.3.apk',
+                'notes'        => "- Fixed issue with APK installation not prompting\n- Security improvements",
+                'mandatory'    => false,
+            ],
             // --- ADD NEW RELEASES ABOVE THIS LINE ---
             // Example for next release:
             // [

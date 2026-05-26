@@ -134,7 +134,9 @@ class UpdateService {
     );
 
     try {
-      final tempDir = await getTemporaryDirectory();
+      final tempDir = Platform.isAndroid
+          ? (await getExternalStorageDirectory()) ?? await getTemporaryDirectory()
+          : await getTemporaryDirectory();
       final filePath = '${tempDir.path}/dabaindia_update.apk';
 
       // Delete old file if exists
