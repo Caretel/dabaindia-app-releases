@@ -104,8 +104,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class HomeTab extends StatelessWidget {
+class HomeTab extends StatefulWidget {
   const HomeTab({super.key});
+
+  @override
+  State<HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<HomeTab> {
+  Future<void> _onRefresh() async {
+    await Future.wait([
+      context.read<AttendanceProvider>().fetchStatus(),
+      context.read<LeaveProvider>().fetchNotifications(),
+    ]);
+  }
 
   Future<void> _handleAttendance(BuildContext context, bool isCheckIn) async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -168,8 +180,12 @@ class HomeTab extends StatelessWidget {
     final att = context.watch<AttendanceProvider>();
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+      child: RefreshIndicator(
+        onRefresh: _onRefresh,
+        color: AppTheme.primaryNavy,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -315,6 +331,7 @@ class HomeTab extends StatelessWidget {
             _buildActivityItem('Clocked In', '09:05 AM', 'Oct 23, 2023', Colors.green),
           ],
         ),
+        ),
       ),
     );
   }
@@ -325,17 +342,32 @@ class HomeTab extends StatelessWidget {
   }
 
   Widget _buildWorkingHoursCard(BuildContext context, AttendanceProvider att) {
-    final target    = att.targetHours;
-    final achieved  = att.achievedHours;
-    final remaining = att.remainingHours;
-    final progress  = target > 0 ? (achieved / target).clamp(0.0, 1.0) : 0.0;
-    final pct       = (progress * 100).toStringAsFixed(0);
+    // elapsed target = how many hours should have been done up to today
+    final elapsedTarget    = att.targetHours.toDouble();
+    final fullTarget       = att.fullMonthTargetHours;
+    final achieved         = att.achievedHours;
+    final remaining        = att.remainingHours;
+    final excess           = att.excessHours;
+    final dutyHrs          = att.dutyHours;
+
+    // Progress bar: achieved vs elapsed target
+    final progress = elapsedTarget > 0 ? (achieved / elapsedTarget).clamp(0.0, 1.0) : 0.0;
+    final pct      = (progress * 100).toStringAsFixed(0);
+
+    final isAhead  = excess > 0;
+    final isBehind = remaining > 0;
+    final badgeText  = isAhead  ? '+${excess}h Ahead'
+                     : isBehind ? '-${remaining}h Behind'
+                     : 'On Track ✓';
+    final badgeColor = isAhead  ? const Color(0xFF4ADE80)
+                     : isBehind ? const Color(0xFFFBBF24)
+                     : const Color(0xFF60A5FA);
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppTheme.primaryNavy, AppTheme.primaryNavy.withOpacity(0.85)],
+          colors: [AppTheme.primaryNavy, AppTheme.primaryNavy.withOpacity(0.82)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -351,41 +383,81 @@ class HomeTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header row
           Row(
             children: [
-              const Icon(Icons.timer_rounded, color: Colors.white70, size: 20),
+              const Icon(Icons.timer_rounded, color: Colors.white70, size: 18),
               const SizedBox(width: 8),
-              const Text(
-                'Working Hours — This Month',
-                style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+              const Expanded(
+                child: Text(
+                  'Working Hours — This Month',
+                  style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
+                ),
               ),
-              const Spacer(),
-              Text(
-                '$pct%',
-                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
+              // Full month target chip
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  'Target: ${fullTarget}h',
+                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          // Progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 8,
-              backgroundColor: Colors.white.withOpacity(0.2),
-              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4ADE80)),
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Three stats in a row
+          const SizedBox(height: 14),
+
+          // Progress bar with percentage
           Row(
             children: [
-              Expanded(child: _buildHourStat('Target', '${target}h', Colors.white70)),
-              Container(width: 1, height: 36, color: Colors.white24),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 9,
+                    backgroundColor: Colors.white.withOpacity(0.18),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isAhead ? const Color(0xFF4ADE80) : const Color(0xFFFBBF24),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                '$pct%',
+                style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
+          // Ahead / Behind badge
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            decoration: BoxDecoration(
+              color: badgeColor.withOpacity(0.18),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: badgeColor.withOpacity(0.5)),
+            ),
+            child: Text(
+              badgeText,
+              style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(height: 18),
+
+          // Stats row: Elapsed Target | Achieved | Daily Duty
+          Row(
+            children: [
+              Expanded(child: _buildHourStat('So Far Target', '${elapsedTarget}h', Colors.white70)),
+              Container(width: 1, height: 38, color: Colors.white24),
               Expanded(child: _buildHourStat('Achieved', '${achieved}h', const Color(0xFF4ADE80))),
-              Container(width: 1, height: 36, color: Colors.white24),
-              Expanded(child: _buildHourStat('Remaining', '${remaining}h', const Color(0xFFFBBF24))),
+              Container(width: 1, height: 38, color: Colors.white24),
+              Expanded(child: _buildHourStat('Daily Duty', '${dutyHrs}h', const Color(0xFF93C5FD))),
             ],
           ),
         ],
@@ -396,9 +468,9 @@ class HomeTab extends StatelessWidget {
   Widget _buildHourStat(String label, String value, Color color) {
     return Column(
       children: [
-        Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
+        Text(value, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: color)),
         const SizedBox(height: 4),
-        Text(label, style: const TextStyle(fontSize: 11, color: Colors.white54, fontWeight: FontWeight.w500)),
+        Text(label, style: const TextStyle(fontSize: 10, color: Colors.white54, fontWeight: FontWeight.w500)),
       ],
     );
   }

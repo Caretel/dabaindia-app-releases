@@ -27,6 +27,12 @@ class AttendanceProvider with ChangeNotifier {
   double _achievedHours = 0;
   int _targetHours = 0;
   double _remainingHours = 0;
+  double _fullMonthTargetHours = 0;
+  double _excessHours = 0;
+  double _dutyHours = 8;
+
+  // History analytics (dashboard-aligned, updated on fetchHistory)
+  Map<String, dynamic> _historyAnalytics = {};
 
   bool get isLoading => _isLoading;
   bool get isCheckedIn => _isCheckedIn;
@@ -38,6 +44,10 @@ class AttendanceProvider with ChangeNotifier {
   double get achievedHours => _achievedHours;
   int get targetHours => _targetHours;
   double get remainingHours => _remainingHours;
+  double get fullMonthTargetHours => _fullMonthTargetHours;
+  double get excessHours => _excessHours;
+  double get dutyHours => _dutyHours;
+  Map<String, dynamic> get historyAnalytics => _historyAnalytics;
 
   Future<void> fetchStatus() async {
     try {
@@ -49,6 +59,9 @@ class AttendanceProvider with ChangeNotifier {
         _achievedHours = (response.data['achieved_hours'] ?? 0).toDouble();
         _targetHours = (response.data['target_hours'] ?? 0).toInt();
         _remainingHours = (response.data['remaining_hours'] ?? 0).toDouble();
+        _fullMonthTargetHours = (response.data['full_month_target_hours'] ?? 0).toDouble();
+        _excessHours = (response.data['excess_hours'] ?? 0).toDouble();
+        _dutyHours = (response.data['duty_hours'] ?? 8).toDouble();
         notifyListeners();
       }
       
@@ -237,6 +250,7 @@ class AttendanceProvider with ChangeNotifier {
             .map((e) => AttendanceRecord.fromJson(e))
             .toList();
         _leaves = List<String>.from(response.data['leaves'] ?? []);
+        _historyAnalytics = Map<String, dynamic>.from(response.data['analytics'] ?? {});
         notifyListeners();
       }
     } catch (_) {}
