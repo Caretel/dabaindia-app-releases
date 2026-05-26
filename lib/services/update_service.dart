@@ -3,7 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:open_file/open_file.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../config/theme.dart';
@@ -125,6 +125,7 @@ class UpdateService {
   Future<void> _downloadAndInstallApk(BuildContext context, String url) async {
     // ValueNotifier to track download progress (0.0 → 1.0)
     final progressNotifier = ValueNotifier<double>(0.0);
+    bool dialogPopped = false;
 
     showDialog(
       context: context,
@@ -151,19 +152,27 @@ class UpdateService {
       );
 
       // Close progress dialog
-      if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
+      if (context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        dialogPopped = true;
+      }
 
       // Trigger APK install
-      final result = await OpenFile.open(filePath);
+      final result = await OpenFile.open(
+        filePath,
+        type: "application/vnd.android.package-archive",
+      );
       if (result.type != ResultType.done) {
         throw Exception(result.message);
       }
     } catch (e) {
       if (context.mounted) {
-        Navigator.of(context, rootNavigator: true).pop();
+        if (!dialogPopped) {
+          Navigator.of(context, rootNavigator: true).pop();
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Download failed: $e'),
+            content: Text('Installation failed: $e'),
             backgroundColor: AppTheme.errorRed,
           ),
         );
