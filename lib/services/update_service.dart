@@ -133,6 +133,7 @@ class UpdateService {
       builder: (ctx) => UpdateProgressDialog(progressNotifier: progressNotifier),
     );
 
+    HttpClient? client;
     try {
       final tempDir = Platform.isAndroid
           ? (await getExternalStorageDirectory()) ?? await getTemporaryDirectory()
@@ -143,21 +144,41 @@ class UpdateService {
       final file = File(filePath);
       if (await file.exists()) await file.delete();
 
-      await _dio.download(
-        url,
-        filePath,
-        onReceiveProgress: (received, total) {
-          if (total > 0) {
-            progressNotifier.value = received / total;
-          }
-        },
-      );
+      // Use HttpClient for robust download to avoid dio stream hanging issues
+      client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 15);
+      final request = await client.getUrl(Uri.parse(url));
+      final response = await request.close();
+
+      if (response.statusCode != 200) {
+        throw Exception("Server returned status code ${response.statusCode}");
+      }
+
+      final fileSink = file.openWrite();
+      int downloaded = 0;
+      final total = response.contentLength;
+
+      await response.forEach((chunk) {
+        fileSink.add(chunk);
+        downloaded += chunk.length;
+        if (total > 0) {
+          progressNotifier.value = downloaded / total;
+        }
+      });
+
+      await fileSink.flush();
+      await fileSink.close();
+      client.close();
+      client = null;
 
       // Close progress dialog
       if (context.mounted) {
         Navigator.of(context, rootNavigator: true).pop();
         dialogPopped = true;
       }
+
+      // Small delay to let the dialog close transition complete
+      await Future.delayed(const Duration(milliseconds: 300));
 
       // Trigger APK install
       final result = await OpenFile.open(
@@ -168,6 +189,7 @@ class UpdateService {
         throw Exception(result.message);
       }
     } catch (e) {
+      client?.close();
       if (context.mounted) {
         if (!dialogPopped) {
           Navigator.of(context, rootNavigator: true).pop();
