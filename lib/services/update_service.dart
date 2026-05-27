@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:open_file/open_file.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../config/api_config.dart';
 import '../config/theme.dart';
 
@@ -123,6 +124,25 @@ class UpdateService {
   }
 
   Future<void> _downloadAndInstallApk(BuildContext context, String url) async {
+    // Check and request "Install Unknown Apps" permission on Android 8.0+
+    if (Platform.isAndroid) {
+      final status = await Permission.requestInstallPackages.status;
+      if (!status.isGranted) {
+        final reqStatus = await Permission.requestInstallPackages.request();
+        if (!reqStatus.isGranted) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Installation permission is required to update the app.'),
+                backgroundColor: AppTheme.errorRed,
+              ),
+            );
+          }
+          return;
+        }
+      }
+    }
+
     // ValueNotifier to track download progress (0.0 → 1.0)
     final progressNotifier = ValueNotifier<double>(0.0);
     bool dialogPopped = false;

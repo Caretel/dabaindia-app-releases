@@ -328,6 +328,13 @@ switch ($act) {
                 'notes'        => "- Verify in-app auto-update from v1.0.4 to v1.0.5",
                 'mandatory'    => false,
             ],
+            [
+                'version_name' => '1.0.6',
+                'version_code' => 7,
+                'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.6/dabaindia-attendance-v1.0.6.apk',
+                'notes'        => "- Fix package installer with REQUEST_INSTALL_PACKAGES permission handler",
+                'mandatory'    => false,
+            ],
             // --- ADD NEW RELEASES ABOVE THIS LINE ---
             // Example for next release:
             // [
