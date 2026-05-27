@@ -335,6 +335,13 @@ switch ($act) {
                 'notes'        => "- Fix package installer with REQUEST_INSTALL_PACKAGES permission handler",
                 'mandatory'    => false,
             ],
+            [
+                'version_name' => '1.0.7',
+                'version_code' => 8,
+                'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.7/dabaindia-attendance-v1.0.7.apk',
+                'notes'        => "- Verify in-app auto-update from v1.0.6 to v1.0.7 (resolves signature conflict)",
+                'mandatory'    => false,
+            ],
             // --- ADD NEW RELEASES ABOVE THIS LINE ---
             // Example for next release:
             // [
