@@ -44,6 +44,13 @@ $releases = [
         'notes'        => "- Testing update install prompt fix",
         'mandatory'    => false,
     ],
+    [
+        'version_name' => '1.0.5',
+        'version_code' => 6,
+        'update_url'   => 'https://github.com/Caretel/dabaindia-app-releases/releases/download/v1.0.5/dabaindia-attendance-v1.0.5.apk',
+        'notes'        => "- Verify in-app auto-update from v1.0.4 to v1.0.5",
+        'mandatory'    => false,
+    ],
     // --- ADD NEW RELEASES ABOVE THIS LINE ---
     // Example for next release:
     // [
